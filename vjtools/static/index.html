@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VJ Toolbox</title>
+<style>
+:root{--bg:#f3f4f8;--ink:#14182b;--mute:#5a607a;--line:#d5d8e6;--panel:#fff;--a:#2b3af0;--b:#ff3d81;--ok:#12906f;--bad:#d1334a;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#10122a;--ink:#eceefb;--mute:#a0a6c8;--line:#2a2e57;--panel:#171a3a;--a:#7f8bff;--b:#ff6fa3;--ok:#3fd6a4;--bad:#ff7088;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1060px;margin:0 auto;padding:20px}
+h1{font-size:2rem;letter-spacing:-.03em;margin:8px 0 2px}h2{font-size:1.15rem;margin:0 0 10px}
+.sub{color:var(--mute);margin:0 0 18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.two{display:grid;grid-template-columns:1fr 2fr;gap:16px}@media(max-width:800px){.two{grid-template-columns:1fr}}
+button,.btn{font:inherit;cursor:pointer;border:2px solid var(--ink);background:transparent;color:var(--ink);padding:6px 14px;border-radius:999px;font-weight:600}
+button.main{background:var(--ink);color:var(--bg)}button.sm{padding:2px 10px;font-size:.85rem}button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:12px;text-align:center;color:var(--mute);margin-bottom:10px}.drop.over{border-color:var(--b);color:var(--ink)}
+.list{display:flex;flex-direction:column;gap:4px;max-height:300px;overflow:auto}
+.row{display:flex;gap:8px;align-items:center;padding:4px 6px;border-radius:8px}.row:hover{background:var(--bg)}.row span.n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row small,.muted{color:var(--mute)}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;max-height:340px;overflow:auto}
+.vt{border:2px solid var(--line);border-radius:8px;overflow:hidden;position:relative;cursor:pointer;background:#000}.vt.sel{border-color:var(--b)}
+.vt video{width:100%;height:78px;object-fit:cover;display:block;pointer-events:none}
+.vt .cap{font-size:.75rem;padding:2px 6px;background:var(--panel);display:flex;justify-content:space-between;gap:4px}.vt .cap span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vt .x{position:absolute;top:2px;right:2px;background:var(--panel);border:0;border-radius:50%;width:22px;height:22px;padding:0;line-height:20px}
+details{border-top:1px solid var(--line);padding:8px 0}details>summary{cursor:pointer;font-weight:700;padding:4px 0}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px 22px;margin-top:8px}
+.f label{display:block;font-size:.9rem;margin-bottom:2px}.f .ctl{display:flex;gap:8px;align-items:center}.f input[type=range]{flex:1;accent-color:var(--b)}
+.f output{min-width:5ch;text-align:right;font-variant-numeric:tabular-nums}.f input[type=text],.f input[type=number],.f select{width:100%;font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.f .h{font-size:.78rem;color:var(--mute)}
+button.on{background:var(--ink);color:var(--bg)}
+.presets{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.run{display:flex;gap:16px;align-items:center;flex-wrap:wrap}.run label{display:flex;gap:6px;align-items:center}.run input[type=number]{width:70px}
+.chip{display:inline-block;font-size:.78rem;padding:1px 9px;border-radius:999px;border:1px solid currentColor;font-weight:700}
+.queued,.running{color:var(--a)}.done{color:var(--ok)}.failed,.cancelled{color:var(--bad)}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:8px 0 2px}.bar i{display:block;height:100%;background:var(--b);transition:width .5s}
+.job video{width:100%;max-height:420px;background:#000;border-radius:8px;margin-top:8px}.job pre{max-height:220px;overflow:auto;background:var(--bg);padding:8px;border-radius:8px;font-size:.8rem;white-space:pre-wrap}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}#msg{color:var(--bad);margin-top:8px;min-height:1.2em}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}.tabs button{padding:6px 16px}
+.tabs button small{font-weight:400;opacity:.75;margin-left:4px}
+.hide{display:none!important}
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.srcchip{border:2px solid var(--line);border-radius:999px;padding:2px 12px;font-size:.85rem;cursor:pointer;user-select:none;display:inline-flex;gap:6px;align-items:center}
+.srcchip.sel{border-color:var(--b)}.srcchip.off{opacity:.55}.srcchip input{accent-color:var(--b)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}
+.rc{border:2px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--panel);display:flex;flex-direction:column}.rc.sel{border-color:var(--b)}
+.rc img{width:100%;height:118px;object-fit:cover;background:#000;display:block}
+.rc .b{padding:6px 8px;font-size:.8rem;display:flex;flex-direction:column;gap:2px}.rc .t{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vt img{width:100%;height:78px;object-fit:cover;display:block;background:#000}
+.vt .tag{position:absolute;left:3px;top:3px;font-size:.68rem;font-weight:700;padding:0 6px;border-radius:999px;background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.vt .tag.good{color:var(--ok)}.vt .tag.bad{color:var(--bad)}
+.hint{font-size:.85rem;color:var(--mute)}
+.addpath{display:flex;gap:8px;margin-top:8px}.addpath input{flex:1;font:inherit;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+.f textarea,.card textarea{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);min-height:70px}
+.prev{font-size:.82rem;font-family:ui-monospace,Menlo,monospace;background:var(--bg);border-radius:8px;padding:8px;max-height:190px;overflow:auto;white-space:pre}
+.job .res a{display:block;font-size:.85rem}.job .cur{font-size:.85rem;color:var(--mute)}
+.warn{color:var(--bad)}
+.f input[type=checkbox]{accent-color:var(--b);width:18px;height:18px}
+.qs{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px}@media(max-width:800px){.qs{grid-template-columns:1fr 1fr}}
+.qs input,.qs select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:100%}
+</style>
+</head>
+<body><div class="wrap">
+<h1>VJ Toolbox</h1>
+<p class="sub" id="sub">Tools for people who make VJ loops and digital visuals.</p>
+<div class="tabs" id="tabs"></div>
+<div class="muted warn" id="ffwarn"></div>
+
+<!-- search -->
+<div class="card" data-for="search">
+  <h2>1. Find loops</h2>
+  <div class="qs">
+    <input id="q" type="text" placeholder="e.g. neon tunnel, liquid, fire, abstract particles" aria-label="Search words">
+    <select id="orient" aria-label="Orientation"><option value="">Any shape</option><option>landscape</option><option>portrait</option><option>square</option></select>
+    <select id="minh" aria-label="Minimum height"><option value="0">Any size</option><option value="720">720p or more</option><option value="1080">1080p or more</option></select>
+    <button class="main" id="dosearch">Search</button>
+  </div>
+  <div class="chips" style="margin-top:10px"><b>Sources:</b><span class="chips" id="srcs"></span></div>
+  <div class="presets" style="margin-top:8px"><label class="chips"><input type="checkbox" id="loopword" checked> Add the word "loop" to the search</label>
+    <label class="chips">Length <input type="number" id="mins" min="0" style="width:64px" placeholder="min s"> – <input type="number" id="maxs" min="0" style="width:64px" placeholder="max s"> s</label></div>
+  <details><summary>Free API keys (Pexels, Pixabay)</summary>
+    <p class="hint">Internet Archive and Wikimedia Commons work without an account. Pexels and Pixabay have a lot of ready-made loops and are free, but need a key (takes a minute): <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">Pexels</a> · <a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener">Pixabay</a>. Keys are saved on this computer only.</p>
+    <div class="fields"><div class="f"><label for="k_pexels">Pexels key</label><input id="k_pexels" type="text" autocomplete="off"></div>
+    <div class="f"><label for="k_pixabay">Pixabay key</label><input id="k_pixabay" type="text" autocomplete="off"></div></div>
+    <button class="sm" id="savekeys">Save keys</button> <span class="muted" id="keymsg"></span></details>
+  <div class="muted" id="smsg" style="margin-top:8px"></div>
+  <div class="presets"><span id="rtools" class="hide"><button class="sm" id="rall">Select all</button> <button class="sm" id="rnone">Select none</button> <span class="muted" id="rcount"></span></span></div>
+  <div class="rgrid" id="results"></div>
+  <p class="hint">Licences differ per clip (Pexels and Pixabay are free to use; Commons and Archive clips may need credit). The author and licence of every download are saved in <b>credits.csv</b> next to the files.</p>
+</div>
+<div class="card" data-for="search">
+  <h2>Or paste links</h2>
+  <textarea id="urls" placeholder="One direct video link per line (https://…/clip.mp4). If yt-dlp is installed, page links also work."></textarea>
+  <p class="hint">Only download things you have the right to use.</p>
+  <button id="fetchgo">Download and convert pasted links</button>
+</div>
+
+<!-- files -->
+<div class="card" data-for="convert gif2mp4 loop">
+  <h2 id="ftitle">1. Files <span class="muted" id="fcount"></span></h2>
+  <div class="drop" id="drop"><span id="droptxt">Drop videos here</span> or <button class="sm" id="pick">choose files</button>
+    <button class="sm" id="selall">Select all</button> <button class="sm" id="selnone">Select none</button> <button class="sm" id="clearf">Clear list</button></div>
+  <div class="addpath"><input id="pathin" type="text" placeholder="Or type a folder on this computer, e.g. /home/me/loops" aria-label="Folder path"><button class="sm" id="addpath">Add folder</button></div>
+  <p class="hint">A folder path is best for big files: nothing is copied. Results go to the output folder you choose below.</p>
+  <div class="vgrid" id="files" style="margin-top:10px;max-height:380px"></div>
+  <div class="presets hide" id="looptools" style="margin-top:8px"><button class="sm" id="checkloops">Check which clips already loop</button><span class="muted" id="chkmsg"></span></div>
+</div>
+<input type="file" id="picker" hidden multiple>
+
+<!-- settings -->
+<div class="card"><h2 id="stitle">2. Settings</h2>
+  <div id="groups"></div>
+</div>
+
+<div class="card run">
+  <button class="main" id="go">Convert</button>
+  <span class="muted" id="runinfo"></span>
+</div>
+<div id="msg" class="warn"></div>
+
+<h2 style="margin-top:22px">Jobs</h2><div id="jobs"><p class="muted">No jobs yet.</p></div>
+<p class="hint" style="margin-top:24px">Part of the Munken Loops family. Results are plain mp4 files you can drop straight into the Munken Loops mixer or any VJ software.</p>
+</div>
+<script>
+const $=s=>document.querySelector(s),api=(u,o)=>fetch(u,o).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||r.statusText);return j});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=b=>b>1e6?(b/1e6).toFixed(1)+' MB':Math.round(b/1e3)+' kB';
+const TOOLS={
+ convert:{label:'Convert',sub:'Bulk convert mov, webm, mkv, gif … to VJ-friendly mp4, with bulk file naming.',go:'Convert',gif:false},
+ gif2mp4:{label:'GIF → MP4',sub:'Bulk convert GIF files to mp4 that VJ software can play smoothly.',go:'Convert GIFs',gif:true},
+ loop:{label:'Make loops',sub:'Turns clips into seamless loops: checks the loop point, then trims, plays forward + backward, or crossfades.',go:'Make loops',gif:false},
+ search:{label:'Find loops',sub:'Search free sources for loops, download them and convert them to VJ-friendly clips.',go:'Download and convert selected',gif:false}};
+let tool=localStorage.getItem('vj_tool')||'convert';if(!TOOLS[tool])tool='convert';
+const FILES={convert:[],gif2mp4:[],loop:[],search:[]},SEL={convert:new Set(),gif2mp4:new Set(),loop:new Set()};
+let INFO={},RES=[],RSEL=new Set(),SRCSEL=new Set(),TAGS={};
+
+const GROUPS=[
+ {g:'VJ-friendly output',open:true,f:[
+  {k:'codec',t:'select',o:[['h264','H.264 mp4 (small, plays everywhere)'],['hap','HAP (Resolume, VDMX, TouchDesigner; large files)'],['hap_q','HAP Q (better colour, larger)'],['prores','ProRes (editing)']],h:'H.264 is right for almost everything, including the Munken Loops mixer.'},
+  {k:'size',t:'select',o:['1280x720','1920x1080','2560x1440','3840x2160'],h:'The size box. Portrait material is turned automatically.'},
+  {k:'fit',t:'select',o:[['keep','Keep shape, only shrink'],['fit','Letterbox to exactly the box'],['fill','Crop to exactly the box']]},
+  {k:'upscale',t:'bool',l:'Enlarge small videos up to the box',h:'Only with “Keep shape”. Good for tiny GIFs.'},
+  {k:'fps',t:'select',o:[['0','Keep (snapped to 24/25/30/50/60)'],['24','24'],['25','25'],['30','30'],['50','50'],['60','60']]},
+  {k:'crf',t:'range',min:12,max:28,step:1,l:'Quality (lower = better, larger)'},
+  {k:'preset',t:'select',o:['ultrafast','veryfast','fast','medium','slow','veryslow'],h:'Slower = smaller file at the same quality.'},
+  {k:'gop',t:'range',min:1,max:120,step:1,l:'Keyframe every (frames)',h:'Short = smooth scrubbing and looping in VJ software.'},
+  {k:'min_seconds',t:'range',min:0,max:120,step:1,l:'Repeat until at least (s)',h:'Whole loops are repeated. 0 = off. The Munken Loops mixer likes 16 s and longer.'},
+  {k:'bg',t:'text',l:'Background for transparent GIFs',h:'black, white or #rrggbb'},
+  {k:'tonemap',t:'bool',l:'Convert HDR (iPhone) to normal colours'},
+  {k:'keep_audio',t:'bool',l:'Keep sound',h:'Off by default: loops normally have no sound.'}]},
+ {g:'Loop',loop:true,open:true,f:[
+  {k:'mode',t:'select',lp:1,o:[['auto','Auto: keep good loops, otherwise fix them'],['pingpong','Forward, then backward'],['crossfade','Crossfade end into start'],['trim','Trim to the best loop point'],['none','Do nothing (just convert)']],h:'Auto: a clip that already loops is left alone; if cutting a bit off the end gives a clean loop it does that; otherwise it uses the fallback.'},
+  {k:'fallback',t:'select',lp:1,o:[['pingpong','Forward, then backward'],['crossfade','Crossfade']],l:'Auto fallback'},
+  {k:'fade',t:'range',lp:1,min:0.3,max:8,step:0.1,l:'Crossfade length (s)'}]},
+ {g:'Naming',open:true,naming:true,f:[
+  {k:'template',t:'text',n:1,l:'Name template',h:'Tokens: {name} {n} {n2} {n3} {n4} {w} {h} {res} {fps} {dur} {folder} {date}'},
+  {k:'prefix',t:'text',n:1},{k:'suffix',t:'text',n:1},
+  {k:'start',t:'number',n:1,l:'First number'},
+  {k:'case',t:'select',n:1,o:[['keep','Keep'],['lower','lowercase'],['upper','UPPERCASE']]},
+  {k:'spaces',t:'select',n:1,o:[['_','Underscore _'],['-','Dash -'],['keep','Keep spaces']]},
+  {k:'ascii',t:'bool',n:1,l:'Plain letters only (æøå → ae o a)'}]},
+ {g:'Output',open:true,f:[
+  {k:'outdir',t:'text',x:1,l:'Output folder',h:'Empty = a folder inside the VJ Toolbox data folder (you can download from the job list).'},
+  {k:'jobs',t:'select',x:1,o:['1','2','3','4'],l:'Files at the same time'},
+  {k:'overwrite',t:'bool',x:1,l:'Overwrite files with the same name',h:'Off = a number is added (-2, -3 …).'},
+  {k:'loopify',t:'select',x:1,srch:1,o:[['none','Just convert'],['auto','Make them seamless loops (auto)'],['pingpong','Forward, then backward'],['crossfade','Crossfade']],l:'Downloaded clips'}]}];
+const LABEL=k=>k.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
+function fld(f){const id='o_'+f.k,l=f.l||LABEL(f.k);let c;
+ if(f.t=='range')c=`<div class="ctl"><input id="${id}" type="range" min="${f.min}" max="${f.max}" step="${f.step}"><output></output></div>`;
+ else if(f.t=='select')c=`<select id="${id}">${f.o.map(o=>Array.isArray(o)?`<option value="${esc(o[0])}">${esc(o[1])}</option>`:`<option>${esc(o)}</option>`).join('')}</select>`;
+ else if(f.t=='bool')c=`<label class="chips"><input id="${id}" type="checkbox"> <span style="font-size:.9rem">${esc(l)}</span></label>`;
+ else c=`<input id="${id}" type="${f.t=='number'?'number':'text'}">`;
+ return `<div class="f${f.srch?' srch':''}${f.lp?' lp':''}"><label for="${id}" ${f.t=='bool'?'class="hide"':''}>${esc(l)}</label>${c}${f.h?`<div class="h">${esc(f.h)}</div>`:''}</div>`}
+function buildSettings(){
+ $('#groups').innerHTML=GROUPS.map(g=>`<details data-g="${g.g}" ${g.open?'open':''} class="${g.loop?'loopg':''}"><summary>${g.g}</summary><div class="fields">${g.f.map(fld).join('')}${g.naming?'<div class="f" style="grid-column:1/-1"><label>Preview</label><div class="prev" id="nprev">Select files to see the new names.</div></div>':''}</div></details>`).join('');
+ const P=INFO.profile,N=INFO.naming;
+ GROUPS.forEach(g=>g.f.forEach(f=>{const e=$('#o_'+f.k);if(!e)return;
+  const v=f.n?N[f.k]:f.x||f.lp?({outdir:'',jobs:'2',overwrite:false,loopify:'none',mode:'auto',fallback:'pingpong',fade:1.5})[f.k]:P[f.k];
+  if(e.type=='checkbox')e.checked=!!v;else e.value=String(v);
+  if(e.type=='range'){const o=e.nextElementSibling;o.textContent=e.value;e.oninput=()=>o.textContent=e.value}}));
+ // sensible defaults per tool
+ $('#groups').addEventListener('input',()=>namePrev());
+ if(!INFO.hap)['hap','hap_q'].forEach(v=>{const o=$('#o_codec option[value='+v+']');if(o){o.disabled=true;o.textContent+=' – not available in this ffmpeg'}});
+}
+const val=f=>{const e=$('#o_'+f.k);return e.type=='checkbox'?e.checked:e.type=='range'||e.type=='number'?Number(e.value):e.value};
+function collect(){const prof={},nm={},lp={},ex={};GROUPS.forEach(g=>g.f.forEach(f=>{const v=val(f);if(f.n)nm[f.k]=v;else if(f.lp)lp[f.k]=v;else if(f.x)ex[f.k]=v;else prof[f.k]=['fps'].includes(f.k)?Number(v):v}));
+ if(tool=='search')lp.mode=ex.loopify;return{profile:prof,naming:nm,loop:lp,outdir:ex.outdir,jobs:Number(ex.jobs),overwrite:ex.overwrite}}
+function setTool(t){tool=t;try{localStorage.setItem('vj_tool',t)}catch(e){}
+ document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));
+ document.querySelectorAll('[data-for]').forEach(e=>e.classList.toggle('hide',!e.dataset.for.split(' ').includes(t)));
+ $('#sub').textContent=TOOLS[t].sub;$('#go').textContent=TOOLS[t].go;
+ document.querySelectorAll('.loopg').forEach(e=>e.classList.toggle('hide',!(t=='loop')));
+ document.querySelectorAll('.srch').forEach(e=>e.classList.toggle('hide',t!='search'));
+ $('#looptools').classList.toggle('hide',t!='loop');
+ $('#droptxt').textContent=TOOLS[t].gif?'Drop GIF files here':'Drop videos here';
+ const sd=document.querySelector('details[data-g="Naming"] .f:last-child');
+ renderFiles();namePrev();runInfo()}
+function runInfo(){if(tool=='search'){$('#runinfo').textContent=RSEL.size?`${RSEL.size} clip(s) selected`:'Select search results above';return}
+ $('#runinfo').textContent=SEL[tool].size?`${SEL[tool].size} of ${FILES[tool].length} file(s) selected`:'Select files above'}
+
+// ---------- files
+function addFiles(list,t=tool){const have=new Set(FILES[t].map(f=>f.path));list.forEach(f=>{if(!have.has(f.path)){FILES[t].push(f);SEL[t].add(f.path)}});if(t==tool){renderFiles();namePrev();runInfo()}}
+function renderFiles(){if(tool=='search')return;const L=FILES[tool];$('#fcount').textContent=L.length?`(${SEL[tool].size} selected of ${L.length})`:'';
+ $('#files').innerHTML=L.map(f=>`<div class="vt ${SEL[tool].has(f.path)?'sel':''}" data-p="${esc(f.path)}"><img loading="lazy" alt="" src="/api/thumb?path=${encodeURIComponent(f.path)}" onerror="this.style.visibility='hidden'">${TAGS[f.path]?`<span class="tag ${TAGS[f.path].cls}" title="${esc(TAGS[f.path].text)}">${esc(TAGS[f.path].short)}</span>`:''}<button class="x" data-rm="${esc(f.path)}" title="Remove from list">✕</button><div class="cap"><span title="${esc(f.name)}">${esc(f.name)}</span><span>${fmt(f.size)}</span></div></div>`).join('')||'<span class="muted">No files yet.</span>'}
+$('#files').onclick=e=>{const rm=e.target.closest('[data-rm]');if(rm){FILES[tool]=FILES[tool].filter(f=>f.path!=rm.dataset.rm);SEL[tool].delete(rm.dataset.rm);renderFiles();namePrev();runInfo();return}
+ const t=e.target.closest('.vt');if(!t)return;const p=t.dataset.p;SEL[tool].has(p)?SEL[tool].delete(p):SEL[tool].add(p);t.classList.toggle('sel');$('#fcount').textContent=`(${SEL[tool].size} selected of ${FILES[tool].length})`;namePrev();runInfo()};
+$('#selall').onclick=()=>{FILES[tool].forEach(f=>SEL[tool].add(f.path));renderFiles();namePrev();runInfo()};
+$('#selnone').onclick=()=>{SEL[tool].clear();renderFiles();namePrev();runInfo()};
+$('#clearf').onclick=()=>{FILES[tool]=[];SEL[tool].clear();renderFiles();namePrev();runInfo()};
+$('#pick').onclick=()=>$('#picker').click();
+$('#picker').onchange=e=>{upload([...e.target.files]);e.target.value=''};
+const drop=$('#drop');['dragenter','dragover'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',e=>upload([...e.dataTransfer.files]));
+async function upload(fs){if(!fs.length)return;const t=tool;let n=0;const BATCH=4;
+ for(let i=0;i<fs.length;i+=BATCH){const fd=new FormData();fs.slice(i,i+BATCH).forEach(f=>fd.append('file',f));
+  $('#msg').textContent=`Uploading ${Math.min(i+BATCH,fs.length)} of ${fs.length}…`;
+  try{const r=await api('/api/upload',{method:'POST',body:fd});n+=r.files.length;addFiles(r.files,t)}catch(e){$('#msg').textContent='Upload failed: '+e.message;return}}
+ $('#msg').textContent=n<fs.length?`${fs.length-n} file(s) skipped (not a video type I know).`:''}
+$('#addpath').onclick=async()=>{const p=$('#pathin').value.trim();if(!p)return;
+ try{const r=await api('/api/scan?path='+encodeURIComponent(p)+'&gif='+(TOOLS[tool].gif?1:0));addFiles(r.files);
+  $('#msg').textContent=r.files.length?(r.truncated?'Showing the first 2000 files.':''):'No matching files in that folder.'}catch(e){$('#msg').textContent=e.message}};
+$('#pathin').onkeydown=e=>{if(e.key=='Enter')$('#addpath').click()};
+$('#checkloops').onclick=async()=>{const L=FILES.loop.filter(f=>SEL.loop.has(f.path));let i=0;
+ for(const f of L){$('#chkmsg').textContent=` Checking ${++i}/${L.length}…`;
+  try{const r=await api('/api/probe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:f.path,loop:true})});
+   const v=r.loop?.verdict;TAGS[f.path]={short:v=='seamless'?'loops ✓':v=='almost'?'almost':'jump',cls:v=='seamless'?'good':'bad',text:r.loop?.text||''}}catch(e){TAGS[f.path]={short:'?',cls:'bad',text:e.message}}
+  renderFiles()}$('#chkmsg').textContent=' Done. Hover a label for details.'};
+
+// ---------- naming preview
+let npT;function namePrev(){clearTimeout(npT);npT=setTimeout(async()=>{const el=$('#nprev');if(!el)return;
+ const files=tool=='search'?[]:[...SEL[tool]].slice(0,300);if(!files.length){el.textContent=tool=='search'?'Downloaded clips are named “provider_id” unless you change the template.':'Select files to see the new names.';return}
+ const c=collect();try{const r=await api('/api/naming-preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files,profile:c.profile,naming:c.naming,outdir:c.outdir})});
+  el.textContent=r.rows.slice(0,12).map(([a,b])=>a+'  →  '+b).join('\n')+(r.rows.length>12?`\n… and ${r.rows.length-12} more`:'')}catch(e){el.textContent=e.message}},250)}
+
+// ---------- search
+function renderSrcs(){$('#srcs').innerHTML=INFO.sources.map(s=>`<label class="srcchip ${SRCSEL.has(s.name)?'sel':''} ${s.ready?'':'off'}" title="${s.ready?'':'Needs a free API key – see below'}"><input type="checkbox" data-s="${s.name}" ${SRCSEL.has(s.name)?'checked':''} ${s.ready?'':'disabled'}>${esc(s.label)}${s.ready?'':' 🔑'}</label>`).join('')}
+$('#srcs').onchange=e=>{const s=e.target.dataset.s;if(!s)return;e.target.checked?SRCSEL.add(s):SRCSEL.delete(s);renderSrcs()};
+$('#savekeys').onclick=async()=>{try{const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pexels:$('#k_pexels').value,pixabay:$('#k_pixabay').value})});INFO.sources=r.sources;r.sources.filter(s=>s.ready).forEach(s=>SRCSEL.add(s.name));renderSrcs();$('#keymsg').textContent='Saved.'}catch(e){$('#keymsg').textContent=e.message}};
+async function doSearch(){const q=$('#q').value.trim();if(!q){$('#smsg').textContent='Type what you are looking for.';return}
+ $('#smsg').textContent='Searching…';$('#dosearch').disabled=true;
+ const p=new URLSearchParams({q,sources:[...SRCSEL].join(','),loop:$('#loopword').checked?1:0,min_height:$('#minh').value,min_s:$('#mins').value||0,max_s:$('#maxs').value||0,orientation:$('#orient').value,n:12});
+ try{const r=await api('/api/search?'+p);RES=r.results;RSEL=new Set();renderResults();
+  const er=Object.entries(r.errors||{}).map(([k,v])=>`${k}: ${v}`).join(' · ');
+  $('#smsg').innerHTML=(RES.length?`${RES.length} clips found.`:'Nothing found. Try other words.')+(er?` <span class="warn">${esc(er)}</span>`:'')}catch(e){$('#smsg').textContent=e.message}
+ $('#dosearch').disabled=false;runInfo()}
+function renderResults(){$('#rtools').classList.toggle('hide',!RES.length);$('#rcount').textContent=RES.length?`${RSEL.size} selected`:'';
+ $('#results').innerHTML=RES.map((r,i)=>`<div class="rc ${RSEL.has(i)?'sel':''}" data-i="${i}">${r.thumb?`<img loading="lazy" referrerpolicy="no-referrer" alt="" src="${esc(r.thumb)}" onerror="this.style.visibility='hidden'">`:'<img alt="">'}<div class="b"><span class="t" title="${esc(r.title)}">${esc(r.title)}</span><span class="muted">${esc(r.provider)} · ${r.height?r.width+'×'+r.height:'size ?'} · ${r.duration?Math.round(r.duration)+' s':'? s'}</span><span class="muted" title="${esc(r.author)}">${esc(r.license||'licence ?')}${r.author?' · '+esc(r.author):''}</span>${r.page?`<a href="${esc(r.page)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:.78rem">Open page ↗</a>`:''}</div></div>`).join('')}
+$('#results').onclick=e=>{const c=e.target.closest('.rc');if(!c)return;const i=+c.dataset.i;RSEL.has(i)?RSEL.delete(i):RSEL.add(i);c.classList.toggle('sel');$('#rcount').textContent=`${RSEL.size} selected`;runInfo()};
+$('#rall').onclick=()=>{RES.forEach((_,i)=>RSEL.add(i));renderResults();runInfo()};$('#rnone').onclick=()=>{RSEL.clear();renderResults();runInfo()};
+$('#dosearch').onclick=doSearch;$('#q').onkeydown=e=>{if(e.key=='Enter')doSearch()};
+
+// ---------- run + jobs
+async function start(body){$('#msg').textContent='';try{const r=await api('/api/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});loadJobs();return r}catch(e){$('#msg').textContent=e.message}}
+$('#go').onclick=()=>{const c=collect();
+ if(tool=='search'){start({tool:'search',items:[...RSEL].map(i=>RES[i]),...c});return}
+ start({tool,files:[...SEL[tool]],...c})};
+$('#fetchgo').onclick=()=>{const c=collect();start({tool:'fetch',urls:$('#urls').value.split(/\s+/).filter(Boolean),...c})};
+let pollT;
+async function loadJobs(){let js=[];try{js=await api('/api/jobs')}catch(e){return}
+ const active=js.some(j=>j.status=='queued'||j.status=='running');
+ if(!js.length){$('#jobs').innerHTML='<p class="muted">No jobs yet.</p>'}
+ else{const open=new Set([...document.querySelectorAll('.job[data-open]')].map(d=>d.dataset.id));
+  $('#jobs').innerHTML=js.map(j=>jobHtml(j,open.has(j.id))).join('')}
+ clearTimeout(pollT);if(active)pollT=setTimeout(loadJobs,1200)}
+function jobHtml(j,open){const run=j.status=='running'||j.status=='queued',names={convert:'Convert',gif2mp4:'GIF → MP4',loop:'Make loops',search:'Find loops',fetch:'Links'};
+ const fl=j.files||[];
+ return `<div class="card job" data-id="${j.id}" ${open?'data-open="1"':''}><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${names[j.tool]||j.tool}</b><span class="chip ${j.status}">${j.status}</span><span class="muted">${new Date(j.created*1000).toLocaleTimeString()}</span>${j.failed?`<span class="warn">${j.failed} failed</span>`:''}</div>
+ ${run?`<div class="bar"><i style="width:${j.progress}%"></i></div><div class="cur">${esc(j.current||'')}${j.status=='queued'?'Waiting in line…':''}</div>`:''}
+ ${j.error?`<div class="warn">${esc(j.error)}</div>`:''}
+ <div class="muted" style="font-size:.85rem">Saved in: ${esc(j.outdir)}</div>
+ ${fl.length?`<div class="res">${fl.slice(0,6).map(f=>`<a href="/api/out/${j.id}/${encodeURIComponent(f.name)}?download=1">${esc(f.name)} <small class="muted">${fmt(f.size)}</small></a>`).join('')}${fl.length>6?`<span class="muted">… and ${fl.length-6} more (all are in the zip)</span>`:''}</div>`:''}
+ ${open&&fl.length?`<video controls loop muted autoplay src="/api/out/${j.id}/${encodeURIComponent(fl[0].name)}"></video>`:''}
+ ${j.log.length?`<details><summary>Log (${j.log.length})</summary><pre>${esc(j.log.join('\n'))}</pre></details>`:''}
+ <div class="acts">${run?`<button class="sm" data-a="cancel">Stop</button>`:`${fl.length?`<button class="sm" data-a="prev">${open?'Hide preview':'Preview first'}</button><a class="btn sm" href="/api/jobs/${j.id}/zip">Download all (zip)</a>`:''}<button class="sm" data-a="del">Remove from list</button>`}</div></div>`}
+$('#jobs').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const d=b.closest('.job'),id=d.dataset.id,a=b.dataset.a;
+ if(a=='cancel')await fetch(`/api/jobs/${id}/cancel`,{method:'POST'});
+ if(a=='del')await fetch(`/api/jobs/${id}`,{method:'DELETE'});
+ if(a=='prev'){d.dataset.open?delete d.dataset.open:d.dataset.open='1'}
+ loadJobs()};
+
+async function init(){
+ INFO=await api('/api/info');
+ if(!INFO.ffmpeg)$('#ffwarn').textContent='ffmpeg was not found on this computer. Install it first (Ubuntu: sudo apt install ffmpeg).';
+ $('#tabs').innerHTML=Object.entries(TOOLS).map(([k,v])=>`<button data-t="${k}">${v.label}</button>`).join('');
+ $('#tabs').onclick=e=>{const b=e.target.closest('[data-t]');b&&setTool(b.dataset.t)};
+ INFO.sources.filter(s=>s.ready).forEach(s=>SRCSEL.add(s.name));renderSrcs();
+ buildSettings();setTool(tool);loadJobs()}
+init().catch(e=>{$('#msg').textContent='Could not start: '+e.message});
+</script></body></html>
