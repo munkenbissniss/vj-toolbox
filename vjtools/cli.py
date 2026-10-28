@@ -97,7 +97,7 @@ def main(argv=None):
 
     p = sub.add_parser("search", help="search free sources for loops and download them as VJ-friendly clips")
     p.add_argument("query", nargs="?", default="")
-    p.add_argument("--source", default="", help="comma separated: pexels,pixabay,archive,commons (default: every source that is ready)")
+    p.add_argument("--source", default="", help="comma separated: pexels,pixabay,commons,nasa,archive,prelinger (default: every source that is ready)")
     p.add_argument("--limit", type=int, default=12, help="results per source")
     p.add_argument("--page", type=int, default=1)
     p.add_argument("--no-loop-word", action="store_true", help="do not add the word 'loop' to the search")
@@ -105,6 +105,7 @@ def main(argv=None):
     p.add_argument("--result-min-seconds", type=float, default=0, dest="s_min", help="only results at least this long")
     p.add_argument("--result-max-seconds", type=float, default=0, dest="s_max", help="only results at most this long")
     p.add_argument("--orientation", choices=["", "landscape", "portrait", "square"], default="")
+    p.add_argument("--pixabay-type", choices=["", "film", "animation"], default="", help="Pixabay only: films or animations (animations are great for VJs)")
     p.add_argument("--download", default="", help="download these results: numbers like 1,3,5-8 or 'all'")
     p.add_argument("--loopify", choices=["none", "auto", "pingpong", "crossfade"], default="none",
                    help="also turn the downloaded clips into seamless loops")
@@ -197,7 +198,8 @@ def dispatch(a):
             for s in S.provider_status():
                 print(f"{s['name']:9} {s['label']:34} {'ready' if s['ready'] else 'needs a free API key (vj keys --' + s['name'] + ' KEY)'}")
             return 0
-        res, errs = S.search(a.query, sources, a.limit, a.page, not a.no_loop_word, a.min_height, a.s_min, a.s_max, a.orientation)
+        res, errs = S.search(a.query, sources, a.limit, a.page, not a.no_loop_word, a.min_height, a.s_min, a.s_max, a.orientation,
+                             pixabay_type=a.pixabay_type)
         for i, r in enumerate(res, 1):
             dim = f"{r.width}x{r.height}" if r.height else "?"
             print(f"{i:3}. [{r.provider}] {r.title[:60]}  {dim}  {r.duration:.0f}s  {r.license}  by {r.author[:30]}\n      {r.page}")

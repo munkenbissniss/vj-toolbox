@@ -120,6 +120,8 @@ class Pixabay:
         if not key:
             raise RuntimeError("Pixabay needs a free API key (https://pixabay.com/api/docs/)")
         params = {"key": key, "q": q, "per_page": max(3, min(n, 200)), "page": page, "safesearch": "true"}
+        if o.get("pixabay_type") in ("film", "animation"):
+            params["video_type"] = o["pixabay_type"]
         j = get_json(f"{self.base}?{urllib.parse.urlencode(params)}")
         out = []
         for h in j.get("hits", []):
@@ -141,10 +143,11 @@ class Pixabay:
 class Archive:
     name, label, needs_key = "archive", "Internet Archive (open licences)", False
     base = "https://archive.org"
+    clause = "(licenseurl:*creativecommons* OR licenseurl:*publicdomain*)"   # only openly licensed items
+    default_license = "Open licence (see page)"
 
     def search(self, q, n, page, o):
-        lic = "(licenseurl:*creativecommons* OR licenseurl:*publicdomain*)"
-        query = f"({q}) AND mediatype:movies AND {lic}"
+        query = f"({q}) AND mediatype:movies AND {self.clause}"
         params = [("q", query), ("rows", min(n, 100)), ("page", page), ("output", "json"), ("sort[]", "downloads desc")]
         params += [("fl[]", f) for f in ("identifier", "title", "creator", "licenseurl", "item_size")]
         j = get_json(f"{self.base}/advancedsearch.php?{urllib.parse.urlencode(params)}")
@@ -152,9 +155,9 @@ class Archive:
         for d in j.get("response", {}).get("docs", []):
             ident = d["identifier"]
             cr = d.get("creator", "")
-            out.append(Result("archive", ident, _strip(d.get("title", ident)), f"{self.base}/details/{ident}",
+            out.append(Result(self.name, ident, _strip(d.get("title", ident)), f"{self.base}/details/{ident}",
                               f"{self.base}/services/img/{ident}", "", 0, 0, 0, ", ".join(cr) if isinstance(cr, list) else cr,
-                              "Open licence (see page)", d.get("licenseurl", "") if isinstance(d.get("licenseurl"), str) else "",
+                              self.default_license, d.get("licenseurl", "") if isinstance(d.get("licenseurl"), str) else "",
                               int(d.get("item_size") or 0)))
         return out
 
@@ -178,6 +181,55 @@ class Archive:
         if isinstance(lic, str):
             r.license_url = lic
             r.license = _license_name(lic)
+        return r
+
+
+class Prelinger(Archive):
+    """Vintage public-domain film from the Prelinger Archives (a collection inside the Internet Archive)."""
+    name, label = "prelinger", "Prelinger Archives (vintage public-domain film)"
+    clause = "collection:prelinger"
+    default_license = "Public domain (Prelinger Archives)"
+
+    def resolve(self, r: Result):
+        lic, lurl = r.license, r.license_url
+        super().resolve(r)
+        r.license, r.license_url = lic, lurl or "https://archive.org/details/prelinger"
+        return r
+
+
+class Nasa:
+    """NASA Image and Video Library: space footage, free to use (NASA media is generally not copyrighted)."""
+    name, label, needs_key = "nasa", "NASA (space footage)", False
+    base = "https://images-api.nasa.gov"
+
+    def search(self, q, n, page, o):
+        j = get_json(f"{self.base}/search?{urllib.parse.urlencode({'q': q, 'media_type': 'video', 'page': page, 'page_size': min(n, 100)})}")
+        out = []
+        for it in j.get("collection", {}).get("items", []):
+            d = (it.get("data") or [{}])[0]
+            nid = d.get("nasa_id")
+            if not nid:
+                continue
+            thumb = next((l.get("href", "") for l in it.get("links", []) if l.get("render") == "image"), "")
+            who = d.get("secondary_creator") or d.get("photographer") or ("NASA " + d["center"] if d.get("center") else "NASA")
+            out.append(Result("nasa", nid, _strip(d.get("title", nid)), f"https://images.nasa.gov/details/{urllib.parse.quote(nid)}",
+                              thumb.replace("http://", "https://"), "", 0, 0, 0, who, "NASA media (public domain unless marked)",
+                              "https://www.nasa.gov/nasa-brand-center/images-and-media/"))
+        return out
+
+    def resolve(self, r: Result):
+        j = get_json(f"{self.base}/asset/{urllib.parse.quote(r.id)}")
+        hrefs = [i.get("href", "") for i in j.get("collection", {}).get("items", [])]
+        mp4 = [h for h in hrefs if h.lower().endswith(".mp4")]
+        if not mp4:
+            raise RuntimeError("No mp4 file for this NASA item")
+        for tag in ("~large", "~medium", "~orig", "~small", "~mobile"):   # large is plenty (and far smaller than the original)
+            hit = next((h for h in mp4 if tag in h), None)
+            if hit:
+                break
+        else:
+            hit = mp4[0]
+        r.url = hit.replace("http://", "https://") if self.base.startswith("https") else hit
         return r
 
 
@@ -213,7 +265,7 @@ class Commons:
         return out
 
 
-PROVIDERS = {c.name: c() for c in (Pexels, Pixabay, Archive, Commons)}
+PROVIDERS = {c.name: c() for c in (Pexels, Pixabay, Commons, Nasa, Archive, Prelinger)}
 
 
 def provider_status():
@@ -222,7 +274,7 @@ def provider_status():
 
 
 def search(query, sources=None, per_source=12, page=1, loop_hint=True, min_height=0, min_seconds=0.0, max_seconds=0.0,
-           orientation="", max_height=1080):
+           orientation="", max_height=1080, pixabay_type=""):
     """Returns (results, errors). A failing source never stops the others."""
     sources = sources or [n for n, p in PROVIDERS.items() if (not p.needs_key) or api_key(n)]
     q = query.strip()
@@ -234,7 +286,7 @@ def search(query, sources=None, per_source=12, page=1, loop_hint=True, min_heigh
             continue
         qq = q + (" loop" if loop_hint and name in ("pexels", "pixabay", "commons") and "loop" not in q.lower() else "")
         try:
-            rs = p.search(qq, per_source, page, dict(orientation=orientation, max_height=max_height))
+            rs = p.search(qq, per_source, page, dict(orientation=orientation, max_height=max_height, pixabay_type=pixabay_type))
         except Exception as e:
             errors[name] = str(e)
             continue

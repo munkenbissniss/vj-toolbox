@@ -48,8 +48,21 @@ def start(video_path, port=0):
                                             "picture_id": "999", "videos": {"large": {"url": base + "/files/x.mp4", "width": 1920, "height": 1080, "size": 1},
                                                                             "tiny": {"url": base + "/files/x.mp4", "width": 640, "height": 360}}}]})
             if p == "/advancedsearch.php":
+                if "collection:prelinger" in q.get("q", [""])[0]:
+                    return self.send({"response": {"docs": [{"identifier": "prel_one", "title": "Duck and Cover", "creator": "Federal Civil Defense"}]}})
                 return self.send({"response": {"docs": [{"identifier": "vid_one", "title": "Old <b>film</b>", "creator": ["Carl"],
                                                          "licenseurl": "https://creativecommons.org/licenses/by/4.0/", "item_size": 5}]}})
+            if p == "/nasa/search":
+                if q.get("media_type") != ["video"]:
+                    return self.send({"error": "expected media_type=video"}, code=400)
+                return self.send({"collection": {"items": [{"href": base + "/nasa/asset/NASA_1", "data": [{"nasa_id": "NASA_1", "title": "Nebula flythrough", "center": "JPL", "media_type": "video"}],
+                                                            "links": [{"href": "http://images-assets.nasa.gov/video/NASA_1/NASA_1~thumb.jpg", "rel": "preview", "render": "image"}]}]}})
+            if p == "/nasa/asset/NASA_1":
+                return self.send({"collection": {"items": [{"href": base + f"/files/NASA_1{t}"} for t in ("~small.mp4", "~orig.mp4", "~large.mp4", "~medium.mp4", "~thumb.jpg", ".srt")]}})
+            if p == "/metadata/prel_one":
+                return self.send({"metadata": {}, "files": [{"name": "duck.mp4", "source": "derivative", "size": "100"}]})
+            if p.startswith("/download/prel_one/"):
+                return self.send(video, "video/mp4")
             if p == "/metadata/vid_one":
                 return self.send({"metadata": {"licenseurl": "https://creativecommons.org/licenses/by/4.0/"},
                                   "files": [{"name": "thumb.jpg", "source": "derivative"},
@@ -79,3 +92,5 @@ def patch(S, base):
     S.PROVIDERS["pixabay"].base = base + "/pixabay"
     S.PROVIDERS["archive"].base = base
     S.PROVIDERS["commons"].base = base + "/commons"
+    S.PROVIDERS["nasa"].base = base + "/nasa"
+    S.PROVIDERS["prelinger"].base = base

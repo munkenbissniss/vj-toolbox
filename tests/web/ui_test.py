@@ -92,7 +92,7 @@ with sync_playwright() as p:
     b = p.chromium.launch()
     ctx = b.new_context(viewport={"width": 1180, "height": 900}, accept_downloads=True)
     ctx.add_init_script(ENGINE_JS)
-    ctx.add_init_script(f"window.VJ_BASES = {json.dumps({'pexels': base + '/pexels', 'pixabay': base + '/pixabay', 'archive': base, 'commons': base + '/commons'})};"
+    ctx.add_init_script(f"window.VJ_BASES = {json.dumps({'pexels': base + '/pexels', 'pixabay': base + '/pixabay', 'archive': base, 'commons': base + '/commons', 'nasa': base + '/nasa', 'prelinger': base})};"
                         "localStorage.setItem('vj_key_pexels','testkey');localStorage.setItem('vj_key_pixabay','testkey');")
     pg = ctx.new_page(); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -162,11 +162,13 @@ with sync_playwright() as p:
     # ---------- Search
     pg.click("#tabs [data-t=search]")
     pg.fill("#q", "tunnel"); pg.click("#dosearch"); pg.wait_for_selector("#results .rc")
-    check(pg.locator("#results .rc").count() == 4, "4 results from 4 sources: " + pg.inner_text("#smsg"))
+    check(pg.locator("#results .rc").count() == 6, "6 results from 6 sources: " + pg.inner_text("#smsg"))
+    pg.click("#more"); pg.wait_for_function("!document.querySelector('#more').disabled", timeout=20000)
+    check(pg.locator("#results .rc").count() >= 6, "load more keeps results: " + pg.inner_text("#smsg"))
     pg.click("#rall"); pg.select_option("#o_loopify", "pingpong"); pg.fill("#o_template", "stock_{n2}")
     pg.click("#go"); wait_job(pg, 5)
     res = results(pg, 0)
-    check(sorted(res) == ["credits.csv", "stock_01.mp4", "stock_02.mp4", "stock_03.mp4", "stock_04.mp4"], f"search outputs {sorted(res)}")
+    check(sorted(res) == ["credits.csv"] + [f"stock_0{i}.mp4" for i in range(1, 7)], f"search outputs {sorted(res)}")
     csv = res["credits.csv"].read_text(encoding="utf-8")
     check("Ann Artist" in csv and "CC BY-SA 4.0" in csv, "credits.csv has author and licence")
     check(frames(res["stock_01.mp4"]) == 2 * 50 - 2, f"downloaded clip made into pingpong ({frames(res['stock_01.mp4'])} frames)")

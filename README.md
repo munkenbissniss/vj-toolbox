@@ -7,7 +7,7 @@ Small, sharp tools for people who make VJ loops and digital visuals. Everything 
 | **Convert** | Bulk convert mov, webm, mkv, avi, gif … to VJ-friendly mp4 (or HAP / ProRes) and rename them in bulk |
 | **GIF → MP4** | Bulk convert GIFs (also transparent ones) to smooth mp4 |
 | **Make loops** | Checks if a clip loops. If not: trims it to the best loop point, plays it forward + backward, or crossfades the end into the start |
-| **Find loops** | Searches free sources (Pexels, Pixabay, Internet Archive, Wikimedia Commons), downloads the clips you pick, converts them, and saves who made them and under which licence |
+| **Find loops** | Searches free sources (Pexels, Pixabay, Wikimedia Commons, NASA, Internet Archive, Prelinger Archives), downloads the clips you pick, converts them, and saves who made them and under which licence |
 
 It has a **web interface** (same look as Munken Loops) and a **command line** (`vj`). The results are ordinary mp4 files that go straight into the [Munken Loops](https://github.com/munkenbissniss/munken-loops) mixer, Resolume, VDMX, TouchDesigner, OBS …
 
@@ -150,6 +150,12 @@ Sources:
 |---|---|---|
 | Internet Archive | nothing | Only items with a Creative Commons or public-domain licence |
 | Wikimedia Commons | nothing | Free-licence videos; many need credit (CC BY, CC BY-SA) |
+| NASA Image and Video Library | nothing | Space footage; generally public domain, but check the item for logos and people |
+| Prelinger Archives | nothing | Old ephemeral films from the Internet Archive; public domain. Great for retro VJ material |
+
+Pixabay can be limited to *animations only* or *films only*, and **Load more results** fetches the next page.
+
+Sources without a public API (Mixkit, Videvo, Coverr, Mazwai and similar) can't be searched here, and Coverr's API terms forbid commercial use. Download from their sites yourself, then use **Convert**.
 | Pexels | free API key | Free to use, no credit required (but appreciated) |
 | Pixabay | free API key | Free to use under the Pixabay Content License |
 

@@ -182,10 +182,13 @@ class TestSearch(Base):
         mockserver.patch(S, cls.base)
 
     def test_all_sources(self):
-        res, errs = S.search("tunnel", ["pexels", "pixabay", "archive", "commons"])
+        res, errs = S.search("tunnel", ["pexels", "pixabay", "archive", "commons", "nasa", "prelinger"], pixabay_type="animation")
         self.assertEqual(errs, {})
         by = {r.provider: r for r in res}
-        self.assertEqual(set(by), {"pexels", "pixabay", "archive", "commons"})
+        self.assertEqual(set(by), {"pexels", "pixabay", "archive", "commons", "nasa", "prelinger"})
+        self.assertEqual(by["nasa"].author, "NASA JPL")
+        self.assertEqual(by["prelinger"].license, "Public domain (Prelinger Archives)")
+        self.assertTrue(by["nasa"].thumb.startswith("https://"))
         self.assertEqual(by["pexels"].height, 1080)  # picks the best file within the height cap
         self.assertEqual(by["pixabay"].height, 1080)
         self.assertEqual(by["archive"].title, "Old film")
@@ -208,6 +211,15 @@ class TestSearch(Base):
         S.PROVIDERS["archive"].resolve(r)
         self.assertTrue(r.url.endswith("film.mp4") or "film%20big" in r.url)
         self.assertEqual(r.license, "CC BY 4.0")
+
+    def test_nasa_and_prelinger_resolve(self):
+        n = S.PROVIDERS["nasa"].search("x", 5, 1, {})[0]
+        S.PROVIDERS["nasa"].resolve(n)
+        self.assertTrue(n.url.endswith("~large.mp4"), n.url)      # large preferred over the huge original
+        p = S.PROVIDERS["prelinger"].search("x", 5, 1, {})[0]
+        S.PROVIDERS["prelinger"].resolve(p)
+        self.assertTrue(p.url.endswith("duck.mp4"))
+        self.assertEqual(p.license, "Public domain (Prelinger Archives)")
 
     def test_download_convert_credits(self):
         res, _ = S.search("x", ["pexels", "commons", "archive"])

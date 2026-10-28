@@ -59,7 +59,7 @@ button.on{background:var(--ink);color:var(--bg)}
 .job .res a{display:block;font-size:.85rem}.job .cur{font-size:.85rem;color:var(--mute)}
 .warn{color:var(--bad)}
 .f input[type=checkbox]{accent-color:var(--b);width:18px;height:18px}
-.qs{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px}@media(max-width:800px){.qs{grid-template-columns:1fr 1fr}}
+.qs{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:10px}@media(max-width:800px){.qs{grid-template-columns:1fr 1fr}}
 .qs input,.qs select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:100%}
 </style>
 </head>
@@ -77,6 +77,7 @@ button.on{background:var(--ink);color:var(--bg)}
     <input id="q" type="text" placeholder="e.g. neon tunnel, liquid, fire, abstract particles" aria-label="Search words">
     <select id="orient" aria-label="Orientation"><option value="">Any shape</option><option>landscape</option><option>portrait</option><option>square</option></select>
     <select id="minh" aria-label="Minimum height"><option value="0">Any size</option><option value="720">720p or more</option><option value="1080">1080p or more</option></select>
+    <select id="ptype" aria-label="Pixabay type"><option value="">Pixabay: films + animations</option><option value="animation">Pixabay: animations only</option><option value="film">Pixabay: films only</option></select>
     <button class="main" id="dosearch">Search</button>
   </div>
   <div class="chips" style="margin-top:10px"><b>Sources:</b><span class="chips" id="srcs"></span></div>
@@ -90,6 +91,7 @@ button.on{background:var(--ink);color:var(--bg)}
   <div class="muted" id="smsg" style="margin-top:8px"></div>
   <div class="presets"><span id="rtools" class="hide"><button class="sm" id="rall">Select all</button> <button class="sm" id="rnone">Select none</button> <span class="muted" id="rcount"></span></span></div>
   <div class="rgrid" id="results"></div>
+  <div class="presets hide" id="moretools"><button id="more">Load more results</button></div>
   <p class="hint">Licences differ per clip (Pexels and Pixabay are free to use; Commons and Archive clips may need credit). The author and licence of every download are saved in <b>credits.csv</b>, which comes with your downloaded files.</p>
 </div>
 <div class="card" data-for="search">

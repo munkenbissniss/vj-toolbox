@@ -4,13 +4,16 @@
 
 const B = () => ({
   pexels: 'https://api.pexels.com/videos/search', pixabay: 'https://pixabay.com/api/videos/',
-  archive: 'https://archive.org', commons: 'https://commons.wikimedia.org/w/api.php', ...(window.VJ_BASES || {}),
+  archive: 'https://archive.org', prelinger: 'https://archive.org', commons: 'https://commons.wikimedia.org/w/api.php',
+  nasa: 'https://images-api.nasa.gov', ...(window.VJ_BASES || {}),
 });
 export const SOURCES = [
   { name: 'pexels', label: 'Pexels', needsKey: true },
   { name: 'pixabay', label: 'Pixabay', needsKey: true },
-  { name: 'archive', label: 'Internet Archive (open licences)', needsKey: false },
   { name: 'commons', label: 'Wikimedia Commons', needsKey: false },
+  { name: 'nasa', label: 'NASA (space footage)', needsKey: false },
+  { name: 'archive', label: 'Internet Archive (open licences)', needsKey: false },
+  { name: 'prelinger', label: 'Prelinger Archives (vintage public-domain film)', needsKey: false },
 ];
 const store = { get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } } };
 export const getKey = n => store.get('vj_key_' + n);
@@ -42,7 +45,7 @@ const P = {
   },
   async pixabay(q, n, page, o) {
     const key = getKey('pixabay'); if (!key) throw new Error('Pixabay needs a free API key');
-    const j = await getJson(`${B().pixabay}?${qs({ key, q, per_page: Math.max(3, Math.min(n, 200)), page, safesearch: 'true' })}`);
+    const j = await getJson(`${B().pixabay}?${qs({ key, q, per_page: Math.max(3, Math.min(n, 200)), page, safesearch: 'true', video_type: ['film', 'animation'].includes(o.pixabayType) ? o.pixabayType : '' })}`);
     const out = [];
     for (const h of j.hits || []) {
       const vs = h.videos || {}, cands = ['large', 'medium', 'small', 'tiny'].map(k => vs[k]).filter(c => c && c.url), cap = o.maxHeight || 1080;
@@ -52,11 +55,19 @@ const P = {
     }
     return out;
   },
-  async archive(q, n, page) {
-    const base = B().archive, lic = '(licenseurl:*creativecommons* OR licenseurl:*publicdomain*)';
-    const u = new URLSearchParams([['q', `(${q}) AND mediatype:movies AND ${lic}`], ['rows', Math.min(n, 100)], ['page', page], ['output', 'json'], ['sort[]', 'downloads desc'], ...['identifier', 'title', 'creator', 'licenseurl'].map(f => ['fl[]', f])]);
+  async archive(q, n, page, o, name = 'archive') {
+    const base = B()[name === 'prelinger' ? 'prelinger' : 'archive'], clause = name === 'prelinger' ? 'collection:prelinger' : '(licenseurl:*creativecommons* OR licenseurl:*publicdomain*)';
+    const u = new URLSearchParams([['q', `(${q}) AND mediatype:movies AND ${clause}`], ['rows', Math.min(n, 100)], ['page', page], ['output', 'json'], ['sort[]', 'downloads desc'], ...['identifier', 'title', 'creator', 'licenseurl'].map(f => ['fl[]', f])]);
     const j = await getJson(`${base}/advancedsearch.php?${u}`);
-    return (j.response?.docs || []).map(d => ({ provider: 'archive', id: d.identifier, title: strip(d.title || d.identifier), page: `${base}/details/${d.identifier}`, thumb: `${base}/services/img/${d.identifier}`, url: '', width: 0, height: 0, duration: 0, author: Array.isArray(d.creator) ? d.creator.join(', ') : (d.creator || ''), license: 'Open licence (see page)', licenseUrl: typeof d.licenseurl === 'string' ? d.licenseurl : '' }));
+    return (j.response?.docs || []).map(d => ({ provider: name, id: d.identifier, title: strip(d.title || d.identifier), page: `${base}/details/${d.identifier}`, thumb: `${base}/services/img/${d.identifier}`, url: '', width: 0, height: 0, duration: 0, author: Array.isArray(d.creator) ? d.creator.join(', ') : (d.creator || ''), license: name === 'prelinger' ? 'Public domain (Prelinger Archives)' : 'Open licence (see page)', licenseUrl: name === 'prelinger' ? 'https://archive.org/details/prelinger' : (typeof d.licenseurl === 'string' ? d.licenseurl : '') }));
+  },
+  prelinger(q, n, page, o) { return this.archive(q, n, page, o, 'prelinger'); },
+  async nasa(q, n, page) {
+    const j = await getJson(`${B().nasa}/search?${qs({ q, media_type: 'video', page, page_size: Math.min(n, 100) })}`);
+    return (j.collection?.items || []).filter(it => it.data?.[0]?.nasa_id).map(it => {
+      const d = it.data[0], thumb = (it.links || []).find(l => l.render === 'image')?.href || '';
+      return { provider: 'nasa', id: d.nasa_id, title: strip(d.title || d.nasa_id), page: `https://images.nasa.gov/details/${encodeURIComponent(d.nasa_id)}`, thumb: thumb.replace('http://', 'https://'), url: '', width: 0, height: 0, duration: 0, author: d.secondary_creator || d.photographer || (d.center ? 'NASA ' + d.center : 'NASA'), license: 'NASA media (public domain unless marked)', licenseUrl: 'https://www.nasa.gov/nasa-brand-center/images-and-media/' };
+    });
   },
   async commons(q, n, page) {
     const lim = Math.min(n, 50);
@@ -70,11 +81,11 @@ const P = {
   },
 };
 
-export async function search(query, sources, { perSource = 12, page = 1, loopWord = true, minHeight = 0, minSeconds = 0, maxSeconds = 0, orientation = '' } = {}) {
+export async function search(query, sources, { perSource = 12, page = 1, loopWord = true, minHeight = 0, minSeconds = 0, maxSeconds = 0, orientation = '', pixabayType = '' } = {}) {
   const results = [], errors = {};
   await Promise.all(sources.map(async name => {
     const qq = query.trim() + (loopWord && ['pexels', 'pixabay', 'commons'].includes(name) && !/loop/i.test(query) ? ' loop' : '');
-    try { (await P[name](qq, perSource, page, { orientation, maxHeight: 1080 })).forEach(r => results.push(r)); }
+    try { (await P[name](qq, perSource, page, { orientation, maxHeight: 1080, pixabayType })).forEach(r => results.push(r)); }
     catch (e) { errors[name] = e.message; }
   }));
   const order = sources.reduce((m, s, i) => (m[s] = i, m), {});
@@ -84,7 +95,7 @@ export async function search(query, sources, { perSource = 12, page = 1, loopWor
 
 // find the real file of an Internet Archive item
 async function resolveArchive(r) {
-  const base = B().archive, j = await getJson(`${base}/metadata/${r.id}`);
+  const base = B()[r.provider === 'prelinger' ? 'prelinger' : 'archive'], j = await getJson(`${base}/metadata/${r.id}`);
   const files = (j.files || []).filter(f => /\.(mp4|webm|ogv|mov|m4v|mkv)$/i.test(f.name || '') && ['original', 'derivative'].includes(f.source));
   if (!files.length) throw new Error('No video file in this archive item');
   const pri = f => /\.mp4$/i.test(f.name) ? 0 : /\.webm$/i.test(f.name) ? 1 : 2, sz = f => (+f.size > 0 ? +f.size : 1e18);
@@ -95,8 +106,18 @@ async function resolveArchive(r) {
 }
 
 // download one result -> File. Throws a friendly error when the site does not allow it from a web page.
+async function resolveNasa(r) {
+  const j = await getJson(`${B().nasa}/asset/${encodeURIComponent(r.id)}`);
+  const mp4 = (j.collection?.items || []).map(i => i.href || '').filter(h => /\.mp4$/i.test(h));
+  if (!mp4.length) throw new Error('No mp4 file for this NASA item');
+  const hit = ['~large', '~medium', '~orig', '~small', '~mobile'].map(t => mp4.find(h => h.includes(t))).find(Boolean) || mp4[0];
+  r.url = B().nasa.startsWith('https') ? hit.replace('http://', 'https://') : hit;
+  return r;
+}
+
 export async function download(r, onProgress, signal) {
-  if (!r.url && r.provider === 'archive') await resolveArchive(r);
+  if (!r.url && (r.provider === 'archive' || r.provider === 'prelinger')) { const l = [r.license, r.licenseUrl]; await resolveArchive(r); if (r.provider === 'prelinger') [r.license, r.licenseUrl] = [l[0], l[1] || 'https://archive.org/details/prelinger']; }
+  if (!r.url && r.provider === 'nasa') await resolveNasa(r);
   if (!r.url) throw new Error('No download link');
   let resp;
   try { resp = await fetch(r.url, { signal }); }

@@ -59,7 +59,7 @@ button.on{background:var(--ink);color:var(--bg)}
 .job .res a{display:block;font-size:.85rem}.job .cur{font-size:.85rem;color:var(--mute)}
 .warn{color:var(--bad)}
 .f input[type=checkbox]{accent-color:var(--b);width:18px;height:18px}
-.qs{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px}@media(max-width:800px){.qs{grid-template-columns:1fr 1fr}}
+.qs{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:10px}@media(max-width:800px){.qs{grid-template-columns:1fr 1fr}}
 .qs input,.qs select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:100%}
 </style>
 </head>
@@ -76,6 +76,7 @@ button.on{background:var(--ink);color:var(--bg)}
     <input id="q" type="text" placeholder="e.g. neon tunnel, liquid, fire, abstract particles" aria-label="Search words">
     <select id="orient" aria-label="Orientation"><option value="">Any shape</option><option>landscape</option><option>portrait</option><option>square</option></select>
     <select id="minh" aria-label="Minimum height"><option value="0">Any size</option><option value="720">720p or more</option><option value="1080">1080p or more</option></select>
+    <select id="ptype" aria-label="Pixabay type"><option value="">Pixabay: films + animations</option><option value="animation">Pixabay: animations only</option><option value="film">Pixabay: films only</option></select>
     <button class="main" id="dosearch">Search</button>
   </div>
   <div class="chips" style="margin-top:10px"><b>Sources:</b><span class="chips" id="srcs"></span></div>
@@ -89,6 +90,7 @@ button.on{background:var(--ink);color:var(--bg)}
   <div class="muted" id="smsg" style="margin-top:8px"></div>
   <div class="presets"><span id="rtools" class="hide"><button class="sm" id="rall">Select all</button> <button class="sm" id="rnone">Select none</button> <span class="muted" id="rcount"></span></span></div>
   <div class="rgrid" id="results"></div>
+  <div class="presets hide" id="moretools"><button id="more">Load more results</button></div>
   <p class="hint">Licences differ per clip (Pexels and Pixabay are free to use; Commons and Archive clips may need credit). The author and licence of every download are saved in <b>credits.csv</b>, which comes with your downloaded files.</p>
 </div>
 <div class="card" data-for="search">
@@ -240,18 +242,21 @@ let npT;function namePrev(){clearTimeout(npT);npT=setTimeout(async()=>{const el=
 function renderSrcs(){$('#srcs').innerHTML=INFO.sources.map(s=>`<label class="srcchip ${SRCSEL.has(s.name)?'sel':''} ${s.ready?'':'off'}" title="${s.ready?'':'Needs a free API key – see below'}"><input type="checkbox" data-s="${s.name}" ${SRCSEL.has(s.name)?'checked':''} ${s.ready?'':'disabled'}>${esc(s.label)}${s.ready?'':' 🔑'}</label>`).join('')}
 $('#srcs').onchange=e=>{const s=e.target.dataset.s;if(!s)return;e.target.checked?SRCSEL.add(s):SRCSEL.delete(s);renderSrcs()};
 $('#savekeys').onclick=async()=>{try{const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pexels:$('#k_pexels').value,pixabay:$('#k_pixabay').value})});INFO.sources=r.sources;r.sources.filter(s=>s.ready).forEach(s=>SRCSEL.add(s.name));renderSrcs();$('#keymsg').textContent='Saved.'}catch(e){$('#keymsg').textContent=e.message}};
-async function doSearch(){const q=$('#q').value.trim();if(!q){$('#smsg').textContent='Type what you are looking for.';return}
- $('#smsg').textContent='Searching…';$('#dosearch').disabled=true;
- const p=new URLSearchParams({q,sources:[...SRCSEL].join(','),loop:$('#loopword').checked?1:0,min_height:$('#minh').value,min_s:$('#mins').value||0,max_s:$('#maxs').value||0,orientation:$('#orient').value,n:12});
- try{const r=await api('/api/search?'+p);RES=r.results;RSEL=new Set();renderResults();
+let SQ=null;
+async function doSearch(more=false){const q=more&&SQ?SQ.q:$('#q').value.trim();if(!q){$('#smsg').textContent='Type what you are looking for.';return}
+ const page=more&&SQ?SQ.page+1:1;
+ $('#smsg').textContent='Searching…';$('#dosearch').disabled=true;$('#more').disabled=true;
+ const p=new URLSearchParams({q,sources:[...SRCSEL].join(','),loop:$('#loopword').checked?1:0,min_height:$('#minh').value,min_s:$('#mins').value||0,max_s:$('#maxs').value||0,orientation:$('#orient').value,ptype:$('#ptype').value,page,n:12});
+ try{const r=await api('/api/search?'+p);const have=new Set(RES.map(x=>x.provider+':'+x.id)),fresh=r.results.filter(x=>!have.has(x.provider+':'+x.id));
+  if(more)RES=RES.concat(fresh);else{RES=fresh;RSEL=new Set()}SQ={q,page};renderResults();
   const er=Object.entries(r.errors||{}).map(([k,v])=>`${k}: ${v}`).join(' · ');
-  $('#smsg').innerHTML=(RES.length?`${RES.length} clips found.`:'Nothing found. Try other words.')+(er?` <span class="warn">${esc(er)}</span>`:'')}catch(e){$('#smsg').textContent=e.message}
- $('#dosearch').disabled=false;runInfo()}
-function renderResults(){$('#rtools').classList.toggle('hide',!RES.length);$('#rcount').textContent=RES.length?`${RSEL.size} selected`:'';
+  $('#smsg').innerHTML=(RES.length?`${RES.length} clips found${more&&!fresh.length?' (nothing new on this page)':''}.`:'Nothing found. Try other words.')+(er?` <span class="warn">${esc(er)}</span>`:'')}catch(e){$('#smsg').textContent=e.message}
+ $('#dosearch').disabled=false;$('#more').disabled=false;runInfo()}
+function renderResults(){$('#rtools').classList.toggle('hide',!RES.length);$('#moretools').classList.toggle('hide',!RES.length);$('#rcount').textContent=RES.length?`${RSEL.size} selected`:'';
  $('#results').innerHTML=RES.map((r,i)=>`<div class="rc ${RSEL.has(i)?'sel':''}" data-i="${i}">${r.thumb?`<img loading="lazy" referrerpolicy="no-referrer" alt="" src="${esc(r.thumb)}" onerror="this.style.visibility='hidden'">`:'<img alt="">'}<div class="b"><span class="t" title="${esc(r.title)}">${esc(r.title)}</span><span class="muted">${esc(r.provider)} · ${r.height?r.width+'×'+r.height:'size ?'} · ${r.duration?Math.round(r.duration)+' s':'? s'}</span><span class="muted" title="${esc(r.author)}">${esc(r.license||'licence ?')}${r.author?' · '+esc(r.author):''}</span>${r.page?`<a href="${esc(r.page)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:.78rem">Open page ↗</a>`:''}</div></div>`).join('')}
 $('#results').onclick=e=>{const c=e.target.closest('.rc');if(!c)return;const i=+c.dataset.i;RSEL.has(i)?RSEL.delete(i):RSEL.add(i);c.classList.toggle('sel');$('#rcount').textContent=`${RSEL.size} selected`;runInfo()};
 $('#rall').onclick=()=>{RES.forEach((_,i)=>RSEL.add(i));renderResults();runInfo()};$('#rnone').onclick=()=>{RSEL.clear();renderResults();runInfo()};
-$('#dosearch').onclick=doSearch;$('#q').onkeydown=e=>{if(e.key=='Enter')doSearch()};
+$('#dosearch').onclick=()=>doSearch(false);$('#more').onclick=()=>doSearch(true);$('#q').onkeydown=e=>{if(e.key=='Enter')doSearch(false)};
 
 // ---------- run + jobs
 async function start(body){$('#msg').textContent='';try{const r=await api('/api/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});loadJobs();return r}catch(e){$('#msg').textContent=e.message}}

@@ -204,25 +204,30 @@ function renderSrcs() {
 }
 $('#srcs').onchange = e => { const s = e.target.dataset.s; if (!s) return; e.target.checked ? SRCSEL.add(s) : SRCSEL.delete(s); renderSrcs(); };
 $('#savekeys').onclick = () => { SR.setKey('pexels', $('#k_pexels').value); SR.setKey('pixabay', $('#k_pixabay').value); SR.status().filter(s => s.ready).forEach(s => SRCSEL.add(s.name)); renderSrcs(); $('#keymsg').textContent = 'Saved in this browser.'; };
-async function doSearch() {
-  const q = $('#q').value.trim(); if (!q) { $('#smsg').textContent = 'Type what you are looking for.'; return; }
-  $('#smsg').textContent = 'Searching…'; $('#dosearch').disabled = true;
+let SQ = null;   // the search that "Load more" continues
+async function doSearch(more = false) {
+  const q = more && SQ ? SQ.q : $('#q').value.trim(); if (!q) { $('#smsg').textContent = 'Type what you are looking for.'; return; }
+  const page = more && SQ ? SQ.page + 1 : 1;
+  $('#smsg').textContent = 'Searching…'; $('#dosearch').disabled = true; $('#more').disabled = true;
   try {
-    const r = await SR.search(q, [...SRCSEL], { loopWord: $('#loopword').checked, minHeight: +$('#minh').value, minSeconds: +$('#mins').value || 0, maxSeconds: +$('#maxs').value || 0, orientation: $('#orient').value });
-    RES = r.results; RSEL = new Set(); renderResults();
+    const o = { loopWord: $('#loopword').checked, minHeight: +$('#minh').value, minSeconds: +$('#mins').value || 0, maxSeconds: +$('#maxs').value || 0, orientation: $('#orient').value, pixabayType: $('#ptype').value, page };
+    const r = await SR.search(q, [...SRCSEL], o);
+    const have = new Set(RES.map(x => x.provider + ':' + x.id)), fresh = r.results.filter(x => !have.has(x.provider + ':' + x.id));
+    if (more) RES = RES.concat(fresh); else { RES = fresh; RSEL = new Set(); }
+    SQ = { q, page }; renderResults();
     const er = Object.entries(r.errors).map(([k, v]) => `${k}: ${v}`).join(' · ');
-    $('#smsg').innerHTML = (RES.length ? `${RES.length} clips found.` : 'Nothing found. Try other words.') + (er ? ` <span class="warn">${esc(er)}</span>` : '');
+    $('#smsg').innerHTML = (RES.length ? `${RES.length} clips found${more && !fresh.length ? ' (nothing new on this page)' : ''}.` : 'Nothing found. Try other words.') + (er ? ` <span class="warn">${esc(er)}</span>` : '');
   } catch (e) { $('#smsg').textContent = e.message; }
-  $('#dosearch').disabled = false; runInfo();
+  $('#dosearch').disabled = false; $('#more').disabled = false; runInfo();
 }
 function renderResults() {
-  $('#rtools').classList.toggle('hide', !RES.length); $('#rcount').textContent = RES.length ? `${RSEL.size} selected` : '';
+  $('#rtools').classList.toggle('hide', !RES.length); $('#moretools').classList.toggle('hide', !RES.length); $('#rcount').textContent = RES.length ? `${RSEL.size} selected` : '';
   $('#results').innerHTML = RES.map((r, i) => `<div class="rc ${RSEL.has(i) ? 'sel' : ''}" data-i="${i}">${r.thumb ? `<img loading="lazy" referrerpolicy="no-referrer" alt="" src="${esc(r.thumb)}" onerror="this.style.visibility='hidden'">` : '<img alt="">'}<div class="b"><span class="t" title="${esc(r.title)}">${esc(r.title)}</span><span class="muted">${esc(r.provider)} · ${r.height ? r.width + '×' + r.height : 'size ?'} · ${r.duration ? Math.round(r.duration) + ' s' : '? s'}</span><span class="muted" title="${esc(r.author)}">${esc(r.license || 'licence ?')}${r.author ? ' · ' + esc(r.author) : ''}</span>${r.page ? `<a href="${esc(r.page)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:.78rem">Open page ↗</a>` : ''}</div></div>`).join('');
 }
 $('#results').onclick = e => { const c = e.target.closest('.rc'); if (!c) return; const i = +c.dataset.i; RSEL.has(i) ? RSEL.delete(i) : RSEL.add(i); c.classList.toggle('sel'); $('#rcount').textContent = `${RSEL.size} selected`; runInfo(); };
 $('#rall').onclick = () => { RES.forEach((_, i) => RSEL.add(i)); renderResults(); runInfo(); };
 $('#rnone').onclick = () => { RSEL.clear(); renderResults(); runInfo(); };
-$('#dosearch').onclick = doSearch; $('#q').onkeydown = e => { if (e.key === 'Enter') doSearch(); };
+$('#dosearch').onclick = () => doSearch(false); $('#more').onclick = () => doSearch(true); $('#q').onkeydown = e => { if (e.key === 'Enter') doSearch(false); };
 
 // ---------------------------------------------------------------------------------------------- jobs
 const stems = async dir => { const s = new Set(); for await (const [n] of dir.entries()) s.add(n.replace(/\.[^.]+$/, '').toLowerCase()); return s; };

@@ -155,7 +155,7 @@ def make_app(data_dir):
         sources = [s for s in a.get("sources", "").split(",") if s] or None
         res, errs = S.search(a.get("q", ""), sources, int(a.get("n", 12)), int(a.get("page", 1)), a.get("loop", "1") == "1",
                              int(a.get("min_height", 0) or 0), float(a.get("min_s", 0) or 0), float(a.get("max_s", 0) or 0),
-                             a.get("orientation", ""))
+                             a.get("orientation", ""), pixabay_type=a.get("ptype", ""))
         return jsonify(results=[asdict(r) for r in res], errors=errs)
 
     @app.post("/api/config")
