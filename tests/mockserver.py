@@ -17,10 +17,19 @@ def start(video_path, port=0):
             if isinstance(body, (dict, list)):
                 body = json.dumps(body).encode()
             self.send_response(code)
+            if not self.path.startswith("/nocors"):
+                self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+
+        def do_OPTIONS(self):
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Headers", "authorization, content-type")
+            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+            self.end_headers()
 
         def do_GET(self):
             u = urlparse(self.path)
@@ -54,7 +63,7 @@ def start(video_path, port=0):
                     "width": 1280, "height": 720, "duration": 7.5, "size": 10,
                     "extmetadata": {"Artist": {"value": "<a href='x'>Dora</a>"}, "LicenseShortName": {"value": "CC BY-SA 4.0"},
                                     "LicenseUrl": {"value": "https://creativecommons.org/licenses/by-sa/4.0"}}}]}}}})
-            if p.startswith("/files/"):
+            if p.startswith("/files/") or p.startswith("/nocors/files/"):
                 return self.send(video, "video/mp4")
             if p == "/thumb.jpg":
                 return self.send(b"\xff\xd8\xff\xd9", "image/jpeg")

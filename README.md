@@ -11,7 +11,17 @@ Small, sharp tools for people who make VJ loops and digital visuals. Everything 
 
 It has a **web interface** (same look as Munken Loops) and a **command line** (`vj`). The results are ordinary mp4 files that go straight into the [Munken Loops](https://github.com/munkenbissniss/munken-loops) mixer, Resolume, VDMX, TouchDesigner, OBS …
 
-## Install (Ubuntu)
+## Two versions
+
+| | Desktop (this repo's `vj` command and `vj ui`) | Browser version (`docs/`) |
+|---|---|---|
+| Runs | on your computer with ffmpeg | in the browser (ffmpeg compiled to WebAssembly), nothing to install |
+| Speed | fast | about 5-10 times slower |
+| Formats | everything ffmpeg reads, HAP, ProRes, HDR (iPhone) to SDR, HEVC | H.264 mp4 output; no HAP/ProRes/HDR conversion; HEVC (iPhone) input may not open |
+| Find loops | all four sources, downloads always work | search works; downloads only where the site allows web pages to fetch files |
+| Best for | big batches, 4K, long clips | quick jobs anywhere, and a public website |
+
+## Install the desktop version (Ubuntu)
 
 ```bash
 sudo apt install ffmpeg python3-venv
@@ -29,6 +39,26 @@ python3 vj ui            # then open http://127.0.0.1:8090
 ```
 
 Add files by dragging them in, or type a **folder on your computer** (best for big files: nothing is copied). Pick the tool in the tabs, adjust the settings, press the button. Jobs run in a queue; you can preview the result, stop a job, or download everything as a zip. Use `--data` to choose where uploads and results are kept, and `--host 0.0.0.0` to reach it from another machine (there is no password, so only on a network you trust).
+
+## The browser version (for a website)
+
+`docs/` is a ready-made static site. `docs/index.html` is a small start page and `docs/tools/` is the app (same four tools, same look as the web interface above). It needs no server: put it on GitHub Pages.
+
+1. Download the video engine once and commit it (it is about 31 MB):
+   ```bash
+   python3 get-ffmpeg.py
+   git add -A && git commit -m "Add ffmpeg.wasm" && git push
+   ```
+2. On GitHub: **Settings → Pages → Deploy from a branch → main, folder `/docs`**. The tools are then at `https://munkenbissniss.github.io/vj-toolbox/tools/`.
+
+To try it locally: `python3 -m http.server -d docs 8000`, then open <http://localhost:8000/tools/>.
+
+Good to know:
+
+- Files are read straight from disk and never uploaded. Results stay in the page until you download them (single files, a zip, or **Save all to a folder** in Chrome/Edge). With "Save each file straight into a folder" on, each result is written as soon as it is ready, which is best for big jobs.
+- It runs one file at a time and is slower than the desktop version; 1920×1080 or smaller is the sweet spot. Stop it at any time.
+- Pexels and Pixabay keys are stored in your browser only and sent only to those two sites. Some sources do not let a web page download their files; the app then tells you and you can use *Open page*, download the clip yourself and drop it into Convert.
+- You can link straight to a tool: `…/tools/#loop`.
 
 ## What "VJ-friendly" means
 
@@ -135,18 +165,28 @@ You are responsible for checking that you may use a clip the way you plan to. On
 python3 -m unittest discover -s tests -v
 ```
 
-The tests make their own small videos with ffmpeg, check conversion, naming, loop detection and the pingpong/crossfade/trim results frame by frame, run the whole web API, and test all four search sources against a built-in fake server (so they need no internet or keys).
+```bash
+node --test tests/web/test_core.mjs      # browser version: naming, fps/size rules, probe parsing, zip, loop maths
+python3 tests/web/ui_test.py             # browser version in a real browser (needs playwright for Python and Chromium)
+```
+
+The browser tests replace ffmpeg.wasm with the computer's own ffmpeg, so they check all of the app's logic against real ffmpeg; they do not test the download or speed of ffmpeg.wasm itself.
+
+The Python tests make their own small videos with ffmpeg, check conversion, naming, loop detection and the pingpong/crossfade/trim results frame by frame, run the whole web API, and test all four search sources against a built-in fake server (so they need no internet or keys).
 
 ## Layout
 
 ```
+get-ffmpeg.py         downloads ffmpeg.wasm for the browser version
+docs/index.html       start page for GitHub Pages
+docs/tools/           the browser app: app.js (UI), core.js (profile, naming), loops.js, search.js, zip.js, engine.js
 vj                    command line launcher (python3 vj ...)
 vjtools/core.py       ffmpeg helpers, the VJ-friendly profile, naming
 vjtools/tools.py      batch convert / gif2mp4 / loops / download
 vjtools/loops.py      loop analysis and loop making
 vjtools/search.py     search sources, downloads, credits
 vjtools/server.py     web interface (Flask) + static/index.html
-tests/                tests and the fake search server
+tests/                Python tests, the fake search server, browser tests (tests/web)
 ```
 
 ## Roadmap

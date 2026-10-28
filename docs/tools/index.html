@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VJ Toolbox</title>
+<style>
+:root{--bg:#f3f4f8;--ink:#14182b;--mute:#5a607a;--line:#d5d8e6;--panel:#fff;--a:#2b3af0;--b:#ff3d81;--ok:#12906f;--bad:#d1334a;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#10122a;--ink:#eceefb;--mute:#a0a6c8;--line:#2a2e57;--panel:#171a3a;--a:#7f8bff;--b:#ff6fa3;--ok:#3fd6a4;--bad:#ff7088;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1060px;margin:0 auto;padding:20px}
+h1{font-size:2rem;letter-spacing:-.03em;margin:8px 0 2px}h2{font-size:1.15rem;margin:0 0 10px}
+.sub{color:var(--mute);margin:0 0 18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.two{display:grid;grid-template-columns:1fr 2fr;gap:16px}@media(max-width:800px){.two{grid-template-columns:1fr}}
+button,.btn{font:inherit;cursor:pointer;border:2px solid var(--ink);background:transparent;color:var(--ink);padding:6px 14px;border-radius:999px;font-weight:600}
+button.main{background:var(--ink);color:var(--bg)}button.sm{padding:2px 10px;font-size:.85rem}button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:12px;text-align:center;color:var(--mute);margin-bottom:10px}.drop.over{border-color:var(--b);color:var(--ink)}
+.list{display:flex;flex-direction:column;gap:4px;max-height:300px;overflow:auto}
+.row{display:flex;gap:8px;align-items:center;padding:4px 6px;border-radius:8px}.row:hover{background:var(--bg)}.row span.n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row small,.muted{color:var(--mute)}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;max-height:340px;overflow:auto}
+.vt{border:2px solid var(--line);border-radius:8px;overflow:hidden;position:relative;cursor:pointer;background:#000}.vt.sel{border-color:var(--b)}
+.vt video{width:100%;height:78px;object-fit:cover;display:block;pointer-events:none}
+.vt .cap{font-size:.75rem;padding:2px 6px;background:var(--panel);display:flex;justify-content:space-between;gap:4px}.vt .cap span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vt .x{position:absolute;top:2px;right:2px;background:var(--panel);border:0;border-radius:50%;width:22px;height:22px;padding:0;line-height:20px}
+details{border-top:1px solid var(--line);padding:8px 0}details>summary{cursor:pointer;font-weight:700;padding:4px 0}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px 22px;margin-top:8px}
+.f label{display:block;font-size:.9rem;margin-bottom:2px}.f .ctl{display:flex;gap:8px;align-items:center}.f input[type=range]{flex:1;accent-color:var(--b)}
+.f output{min-width:5ch;text-align:right;font-variant-numeric:tabular-nums}.f input[type=text],.f input[type=number],.f select{width:100%;font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.f .h{font-size:.78rem;color:var(--mute)}
+button.on{background:var(--ink);color:var(--bg)}
+.presets{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.run{display:flex;gap:16px;align-items:center;flex-wrap:wrap}.run label{display:flex;gap:6px;align-items:center}.run input[type=number]{width:70px}
+.chip{display:inline-block;font-size:.78rem;padding:1px 9px;border-radius:999px;border:1px solid currentColor;font-weight:700}
+.queued,.running{color:var(--a)}.done{color:var(--ok)}.failed,.cancelled{color:var(--bad)}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:8px 0 2px}.bar i{display:block;height:100%;background:var(--b);transition:width .5s}
+.job video{width:100%;max-height:420px;background:#000;border-radius:8px;margin-top:8px}.job pre{max-height:220px;overflow:auto;background:var(--bg);padding:8px;border-radius:8px;font-size:.8rem;white-space:pre-wrap}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}#msg{color:var(--bad);margin-top:8px;min-height:1.2em}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}.tabs button{padding:6px 16px}
+.tabs button small{font-weight:400;opacity:.75;margin-left:4px}
+.hide{display:none!important}
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.srcchip{border:2px solid var(--line);border-radius:999px;padding:2px 12px;font-size:.85rem;cursor:pointer;user-select:none;display:inline-flex;gap:6px;align-items:center}
+.srcchip.sel{border-color:var(--b)}.srcchip.off{opacity:.55}.srcchip input{accent-color:var(--b)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}
+.rc{border:2px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--panel);display:flex;flex-direction:column}.rc.sel{border-color:var(--b)}
+.rc img{width:100%;height:118px;object-fit:cover;background:#000;display:block}
+.rc .b{padding:6px 8px;font-size:.8rem;display:flex;flex-direction:column;gap:2px}.rc .t{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vt img{width:100%;height:78px;object-fit:cover;display:block;background:#000}
+.vt .tag{position:absolute;left:3px;top:3px;font-size:.68rem;font-weight:700;padding:0 6px;border-radius:999px;background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.vt .tag.good{color:var(--ok)}.vt .tag.bad{color:var(--bad)}
+.hint{font-size:.85rem;color:var(--mute)}
+.addpath{display:flex;gap:8px;margin-top:8px}.addpath input{flex:1;font:inherit;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+.f textarea,.card textarea{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);min-height:70px}
+.prev{font-size:.82rem;font-family:ui-monospace,Menlo,monospace;background:var(--bg);border-radius:8px;padding:8px;max-height:190px;overflow:auto;white-space:pre}
+.job .res a{display:block;font-size:.85rem}.job .cur{font-size:.85rem;color:var(--mute)}
+.warn{color:var(--bad)}
+.f input[type=checkbox]{accent-color:var(--b);width:18px;height:18px}
+.qs{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px}@media(max-width:800px){.qs{grid-template-columns:1fr 1fr}}
+.qs input,.qs select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:100%}
+</style>
+</head>
+<body><div class="wrap">
+<h1>VJ Toolbox</h1>
+<p class="sub" id="sub">Tools for people who make VJ loops and digital visuals.</p>
+<p class="hint" style="margin:-8px 0 14px">Everything runs inside your browser. Your files never leave your computer.</p>
+<div class="tabs" id="tabs"></div>
+<div class="muted" id="engine" style="min-height:1.2em"></div>
+
+<!-- search -->
+<div class="card" data-for="search">
+  <h2>1. Find loops</h2>
+  <div class="qs">
+    <input id="q" type="text" placeholder="e.g. neon tunnel, liquid, fire, abstract particles" aria-label="Search words">
+    <select id="orient" aria-label="Orientation"><option value="">Any shape</option><option>landscape</option><option>portrait</option><option>square</option></select>
+    <select id="minh" aria-label="Minimum height"><option value="0">Any size</option><option value="720">720p or more</option><option value="1080">1080p or more</option></select>
+    <button class="main" id="dosearch">Search</button>
+  </div>
+  <div class="chips" style="margin-top:10px"><b>Sources:</b><span class="chips" id="srcs"></span></div>
+  <div class="presets" style="margin-top:8px"><label class="chips"><input type="checkbox" id="loopword" checked> Add the word "loop" to the search</label>
+    <label class="chips">Length <input type="number" id="mins" min="0" style="width:64px" placeholder="min s"> – <input type="number" id="maxs" min="0" style="width:64px" placeholder="max s"> s</label></div>
+  <details><summary>Free API keys (Pexels, Pixabay)</summary>
+    <p class="hint">Internet Archive and Wikimedia Commons work without an account. Pexels and Pixabay have a lot of ready-made loops and are free, but need a key (takes a minute): <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">Pexels</a> · <a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener">Pixabay</a>. Keys are saved in this browser only and are sent only to Pexels / Pixabay.</p>
+    <div class="fields"><div class="f"><label for="k_pexels">Pexels key</label><input id="k_pexels" type="text" autocomplete="off"></div>
+    <div class="f"><label for="k_pixabay">Pixabay key</label><input id="k_pixabay" type="text" autocomplete="off"></div></div>
+    <button class="sm" id="savekeys">Save keys</button> <span class="muted" id="keymsg"></span></details>
+  <div class="muted" id="smsg" style="margin-top:8px"></div>
+  <div class="presets"><span id="rtools" class="hide"><button class="sm" id="rall">Select all</button> <button class="sm" id="rnone">Select none</button> <span class="muted" id="rcount"></span></span></div>
+  <div class="rgrid" id="results"></div>
+  <p class="hint">Licences differ per clip (Pexels and Pixabay are free to use; Commons and Archive clips may need credit). The author and licence of every download are saved in <b>credits.csv</b>, which comes with your downloaded files.</p>
+</div>
+<div class="card" data-for="search">
+  <h2>Or paste links</h2>
+  <textarea id="urls" placeholder="One direct video link per line (https://…/clip.mp4). If yt-dlp is installed, page links also work."></textarea>
+  <p class="hint">Only download things you have the right to use. Some sites do not allow a web page to download their files; then use “Open page”, download the clip yourself and drop it into the Convert tab.</p>
+  <button id="fetchgo">Download and convert pasted links</button>
+</div>
+
+<!-- files -->
+<div class="card" data-for="convert gif2mp4 loop">
+  <h2 id="ftitle">1. Files <span class="muted" id="fcount"></span></h2>
+  <div class="drop" id="drop"><span id="droptxt">Drop videos here</span> or <button class="sm" id="pick">choose files</button> <button class="sm" id="pickdir">choose folder</button>
+    <button class="sm" id="selall">Select all</button> <button class="sm" id="selnone">Select none</button> <button class="sm" id="clearf">Clear list</button></div>
+  <p class="hint" style="margin:8px 0 0">Big files are fine: they are read straight from your disk. The browser version is slower than the desktop version (about 5-10 times), so for lots of large 4K files use the Linux/command-line version.</p>
+  <div class="vgrid" id="files" style="margin-top:10px;max-height:380px"></div>
+  <div class="presets hide" id="looptools" style="margin-top:8px"><button class="sm" id="checkloops">Check which clips already loop</button><span class="muted" id="chkmsg"></span></div>
+</div>
+<input type="file" id="picker" hidden multiple accept="video/*,image/gif,.mov,.mkv,.avi,.webm,.gif,.m4v,.mts,.m2ts,.ts,.wmv,.flv,.ogv,.3gp,.mpg,.mpeg,.hevc,.apng">
+<input type="file" id="pickerdir" hidden webkitdirectory>
+
+<!-- settings -->
+<div class="card"><h2 id="stitle">2. Settings</h2>
+  <div id="groups"></div>
+</div>
+
+<div class="card run">
+  <button class="main" id="go">Convert</button>
+  <span class="muted" id="runinfo"></span>
+</div>
+<div id="msg" class="warn"></div>
+
+<h2 style="margin-top:22px">Jobs</h2><div id="jobs"><p class="muted">No jobs yet.</p></div>
+<p class="hint" style="margin-top:24px">Part of the Munken Loops family. Results are plain mp4 files you can drop straight into the Munken Loops mixer or any VJ software. Need more speed, HEVC (iPhone) support or HAP? Use the <a href="https://github.com/munkenbissniss/vj-toolbox">desktop version</a>.</p>
+</div>
+<script type="module" src="app.js"></script>
+</body></html>
